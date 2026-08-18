@@ -1,0 +1,311 @@
+#_______________________________________________________________________________
+#----------------------- 1. LOAD PACKAGES AND DATA -----------------------------
+## Hinweis für mich: Der Code lies ursprünglich über zwei nahezu identische Dataframes.
+## Ggf. muss er für die Daten in Github nochmal angepasst werden.
+
+
+x <- c("tidyverse", "pairwise", "catR")                                         # select packages
+lapply(x, require, character.only = TRUE)                                       # load packages
+setwd() # please set here your working directory
+data <- read.csv2("data_wide.csv")
+rownames(data) <- paste0(rownames(data), "-", data$SPF)                         # set SEN status in rownames
+
+#_______________________________________________________________________________
+#-------------------------- 2. SAMPLE DESCRIPTION ------------------------------
+students <- students %>%
+  select(Schulbesuchsjahr, Klassenstufe, GB, Alter, Geschlecht, SPF)
+
+x <- students %>% filter(Klassenstufe==2) %>% filter(is.na(GB))
+summary(x$Alter, na.rm=T)
+sd(x$Alter, na.rm=T)
+table(x$SPF)
+
+x <- students %>% filter(Klassenstufe==3) %>% filter(is.na(GB))
+summary(x$Alter, na.rm=T)
+sd(x$Alter, na.rm=T)
+table(x$SPF)
+
+x <- students %>% filter(Klassenstufe==4) %>% filter(is.na(GB))
+summary(x$Alter, na.rm=T)
+sd(x$Alter, na.rm=T)
+table(x$SPF)
+
+x <- students %>% filter(SPF==2) %>% filter(Klassenstufe==3 | Klassenstufe==4) 
+summary(x$Alter, na.rm=T)
+sd(x$Alter, na.rm=T)
+
+x <- students %>% filter(SPF==2) %>% filter(grepl("MS", Klassenstufe)) 
+summary(x$Alter, na.rm=T)
+sd(x$Alter, na.rm=T)
+
+summary(students$Alter, na.rm=T)
+sd(students$Alter, na.rm=T)
+table(students$SPF)
+
+#_______________________________________________________________________________
+#-------------------------- 2. RASCH ESTIMATIONS -------------------------------
+
+Rasch1 <- pers(pair(select(data, starts_with("P_"))))                           # rasch modeling subtest 1
+Rasch2 <- pers(pair(select(data, starts_with("W_"))))                           # rasch modeling subtest 2
+Rasch3 <- pers(pair(select(data, starts_with("B_"))))                           # rasch modeling subtest 3
+Rasch4 <- data %>% select(starts_with("S_")) %>%                                # select subtest 4
+  select(-c("S_I05","S_I30","S_I35","S_I19","S_I16","S_I20","S_I34")) %>%       # remove unfitting items subtest 4
+  pair() %>% pers()                                                             # rasch modeling subtest 4
+  
+#_______________________________________________________________________________
+#------------------------------ 3. PARAMETERS ----------------------------------
+
+set.seed(1)                                                                     
+
+# item parameters
+IP1 <- data.frame(a=1, b=Rasch1$pair$sigma, c=0, d=1)                           # subtest 1
+IP2 <- data.frame(a=1, b=Rasch2$pair$sigma, c=0, d=1)                           # subtest 2
+IP3 <- data.frame(a=1, b=Rasch3$pair$sigma, c=0, d=1)                           # subtest 3
+IP4 <- data.frame(a=1, b=Rasch4$pair$sigma, c=0, d=1)                           # subtest 4
+
+# person parameter of students with and without SEN
+PP1 <- select(as.data.frame(Rasch1$pers[-9]), c(persID, WLE)) %>%               # split SEN status subtest 1
+  separate(col=persID, sep="-", into=c("ID","SUB"), extra="merge")
+PP2 <- select(as.data.frame(Rasch2$pers[-9]), c(persID, WLE)) %>%               # split SEN status subtest 2
+  separate(col=persID, sep="-", into=c("ID","SUB"), extra="merge")
+PP3 <- select(as.data.frame(Rasch3$pers[-9]), c(persID, WLE)) %>%               # split SEN status subtest 3
+  separate(col=persID, sep="-", into=c("ID","SUB"), extra="merge")
+PP4 <- select(as.data.frame(Rasch4$pers[-9]), c(persID, WLE)) %>%               # split SEN status subtest 4
+  separate(col=persID, sep="-", into=c("ID","SUB"), extra="merge")
+
+PP1$SUB[PP1$SUB != "0"] <- "1"                                                  # recode to SEN / not SEN subtest 1
+PP2$SUB[PP2$SUB != "0"] <- "1"                                                  # recode to SEN / not SEN subtest 2
+PP3$SUB[PP3$SUB != "0"] <- "1"                                                  # recode to SEN / not SEN subtest 3
+PP4$SUB[PP4$SUB != "0"] <- "1"                                                  # recode to SEN / not SEN subtest 4
+
+PPgenSEN <- data.frame(ST1=rnorm(1000, mean=mean((filter(PP1, SUB==1))$WLE),    # generate 1000 students with SEN subtest 1
+                                 sd = sd((filter(PP1, SUB==1))$WLE)),
+                       ST2=rnorm(1000, mean=mean((filter(PP2, SUB==1))$WLE),    # generate 1000 students with SEN subtest 2
+                                 sd = sd((filter(PP2, SUB==1))$WLE)),
+                       ST3=rnorm(1000, mean=mean((filter(PP3, SUB==1))$WLE),    # generate 1000 students with SEN subtest 3
+                                 sd = sd((filter(PP3, SUB==1))$WLE)),
+                       ST4=rnorm(1000, mean=mean((filter(PP4, SUB==1))$WLE,     # generate 1000 students with SEN subtest 4
+                                                 na.rm=T),
+                                 sd = sd((filter(PP4, SUB==1))$WLE, na.rm=T)))
+PPgen <- data.frame(ST1=rnorm(1000, mean=mean((filter(PP1, SUB==0))$WLE),       # generate 1000 students without SEN subtest 1
+                              sd = sd((filter(PP1, SUB==0))$WLE)),
+                    ST2=rnorm(1000, mean=mean((filter(PP2, SUB==0))$WLE),       # generate 1000 students without SEN subtest 2
+                              sd = sd((filter(PP2, SUB==0))$WLE)),
+                    ST3=rnorm(1000, mean=mean((filter(PP3, SUB==0))$WLE),       # generate 1000 students without SEN subtest 3
+                              sd = sd((filter(PP3, SUB==0))$WLE)),
+                    ST4=rnorm(1000, mean=mean((filter(PP4, SUB==0))$WLE),       # generate 1000 students without SEN subtest 4
+                              sd = sd((filter(PP4, SUB==0))$WLE))) 
+
+tests <- list(list(IP1, PPgenSEN$ST1), list(IP1, PPgen$ST1),                    # store item and person parameter in list
+              list(IP2, PPgenSEN$ST2), list(IP2, PPgen$ST2), 
+              list(IP3, PPgenSEN$ST3), list(IP3, PPgen$ST3), 
+              list(IP4, PPgenSEN$ST4), list(IP4, PPgen$ST4))
+
+matrices <- list()                                                              # empty list
+for (t in tests) {                                                              # simulate response pattern for every element in test list
+  ib = t[[1]] 
+  pb = t[[2]] 
+  pers = simra(itempar = matrix(ib$b, ncol = 1), theta = pb, replicate = 1)[,,1]
+  matrices <- c(matrices, list(pers))
+  }
+
+simra_IP1_SEN <- simra(IP1, theta=PPgenSEN$ST1)
+
+names(matrices) <- c("IP1_SEN", "IP1_noSEN", "IP2_SEN", "IP2_noSEN",            # rename list elements
+                     "IP3_SEN", "IP3_noSEN", "IP4_SEN", "IP4_noSEN")
+  
+#_______________________________________________________________________________
+#------------------------------ 4. CAT SETTINGS --------------------------------
+
+# set start items (0)
+rownames(IP1)[rownames(IP1) == "P_3F"] <- "start"                               # Subtest 1
+rownames(IP2)[rownames(IP2) == "W_I10"] <- "start"                              # Subtest 2
+rownames(IP3)[rownames(IP3) == "B_1G"] <- "start"                               # Subtest 3
+rownames(IP4)[rownames(IP4) == "S_I14"] <- "start"                              # Subtest 4
+
+# set start rules
+Start1 <- list(theta =0,fixItems=which(rownames(IP1)=="start"))                 # Subtest 1
+Start2 <- list(theta =0,fixItems=which(rownames(IP2)=="start"))                 # Subtest 2
+Start3 <- list(theta =0,fixItems=which(rownames(IP3)=="start"))                 # Subtest 3
+Start4 <- list(theta =0,fixItems=which(rownames(IP4)=="start"))                 # Subtest 4
+
+# set estimators and stop rule
+Test <- list(method="BM", itemSelect="MFI")                                     # Bayesian Estimation and Fisher Informartion Item Selection
+Final <- list(method="ML")                                                      # Maximum Likelihood Final Estimation
+Stop <- list(rule = "precision", thr= 0.5)                                      # CAT stops with SE = 0.5
+
+#_______________________________________________________________________________
+#--------------------------- 5. CAT SIMULATIONS --------------------------------
+
+# Simulation of Students without SEN
+a <- simulateRespondents(itemBank=IP1, thetas=PPgen$ST1, 
+                         responsesMatrix=matrices$IP1_noSEN,
+                         start=Start1, test=Test, stop=Stop, final=Final)       # Subtest 1
+b <- simulateRespondents(itemBank=IP2, thetas=PPgen$ST2,
+                         responsesMatrix=matrices$IP2_noSEN, 
+                         start=Start2, test=Test, stop=Stop, final=Final)       # Subtest 2
+c <- simulateRespondents(itemBank=IP3, thetas=PPgen$ST3,
+                         responsesMatrix=matrices$IP3_noSEN, 
+                         start=Start3, test=Test, stop=Stop, final=Final)       # Subtest 3
+d <- simulateRespondents(itemBank=IP4, thetas=PPgen$ST4, 
+                         responsesMatrix=matrices$IP4_noSEN, 
+                         start=Start4, test=Test, stop=Stop, final=Final)       # Subtest 4
+
+print(a)
+print(b)
+print(c)
+print(d)
+plot(a, "trueEst")
+ggsave("plot1.jpg", width=20, height=10, units="cm")
+
+# Simulation of Students with SEN
+d <- simulateRespondents(itemBank=IP1, thetas=PPgenSEN$ST1,
+                         responsesMatrix=matrices$IP1_SEN, 
+                         start=Start1, test=Test, stop=Stop, final=Final)       # Subtest 1
+e <- simulateRespondents(itemBank=IP2, thetas=PPgenSEN$ST2,
+                         responsesMatrix=matrices$IP2_SEN, 
+                         start=Start2, test=Test, stop=Stop, final=Final)       # Subtest 2
+f <- simulateRespondents(itemBank=IP3, thetas=PPgenSEN$ST3, 
+                         responsesMatrix=matrices$IP3_SEN, 
+                         start=Start3, test=Test, stop=Stop, final=Final)       # Subtest 3
+g <- simulateRespondents(itemBank=IP4, thetas=PPgenSEN$ST4, 
+                         responsesMatrix=matrices$IP4_SEN, 
+                         start=Start4, test=Test, stop=Stop, final=Final)       # Subtest 4
+
+print(d)
+print(e)
+print(f)
+print(g)
+
+# Simulation of one Example Student (-1)
+set.seed(100)
+
+h <- randomCAT(-1, IP1, start=Start1, test=Test, stop=Stop, final=Final)
+i <- randomCAT(-1, IP2, start=Start2, test=Test, stop=Stop, final=Final)
+j <- randomCAT(-1, IP3, start=Start3, test=Test, stop=Stop, final=Final)
+k <- randomCAT(-1, IP4, start=Start4, test=Test, stop=Stop, final=Final)
+
+x <- rbind(data.frame(item=h$itemNames,sigma=as.data.frame(h$itemPar)$b, 
+                      pattern=as.factor(h$pattern), theta=h$thetaProv),
+           data.frame(item=i$itemNames,sigma=as.data.frame(i$itemPar)$b, 
+                      pattern=as.factor(i$pattern), theta=i$thetaProv),
+           data.frame(item=j$itemNames,sigma=as.data.frame(j$itemPar)$b, 
+                      pattern=as.factor(j$pattern), theta=j$thetaProv),
+           data.frame(item=k$itemNames,sigma=as.data.frame(k$itemPar)$b, 
+                      pattern=as.factor(k$pattern), theta=k$thetaProv))
+
+# Plot Example Student
+ggplot(x, aes(x = as.numeric(rownames(x)))) +
+  geom_line(aes(y = sigma)) +
+  geom_point(aes(y = sigma, shape = pattern), size = 3) +
+  theme_bw() +
+  scale_shape_manual(values = c(1, 19), labels = c("wrong answer", "correct answer")) +
+  ylim(-1.5, 1.5) +
+  scale_x_continuous(expand = c(0.01, 0), name = "items") +
+  geom_vline(xintercept = 13.5) +
+  geom_vline(xintercept = 26.5) +
+  geom_vline(xintercept = 39.5) +
+  geom_line(data = x, aes(x = as.numeric(rownames(x)), y = theta), linetype = 2) +
+  annotate("text", x = min(as.numeric(rownames(x))), y = 1.5, label = "Test 1", hjust = -0.2, vjust = 1, size = 4) +
+  annotate("text", x = 14, y = 1.5, label = "Test 2", hjust = -0.2, vjust = 1, size = 4) +
+  annotate("text", x = 27, y = 1.5, label = "Test 3", hjust = -0.2, vjust = 1, size = 4) +
+  annotate("text", x = 40, y = 1.5, label = "Test 4", hjust = -0.2, vjust = 1, size = 4) +
+  labs(x = "items", y = "logits") +
+  scale_linetype_manual(values = 2) +
+  labs(caption = "Note: \nThe dashed line shows the estimated person ability \nThe solid line shows the item difficulty while a test run ") +
+  theme(plot.caption = element_text(hjust = 0, margin = margin(t = 10)))
+
+
+#_______________________________________________________________________________
+#_______________________________________________________________________________
+
+# Simulation of binary search
+
+tests = list(list(IP1, PPgenSEN$ST1), 
+             list(IP1, PPgen$ST1), 
+             list(IP2, PPgenSEN$ST2), 
+             list(IP2, PPgen$ST2), 
+             list(IP3, PPgenSEN$ST3), 
+             list(IP3, PPgen$ST3), 
+             list(IP4, PPgenSEN$ST4), 
+             list(IP4, PPgen$ST4))
+
+results = data.frame(row.names = c("cor", "len", "bias"))
+raw_est = list()
+
+for (t in tests) {
+  ib = t[[1]] 
+  ib = ib[order(ib$b),] 
+  pb = t[[2]] 
+  pers = simra(itempar = matrix(ib$b, ncol = 1), theta = pb, replicate = 1) 
+  
+  est = c()
+  n = c()
+  
+  for (i in 1:1000) {
+    min = 1
+    max = length(rownames(ib))
+    cur = floor((max+min) / 2)
+    it = 0
+    
+    items = c()
+    R = 0
+    W = 0
+    
+    while (min <= max) {
+      items = c(items, cur)
+      resp = pers[i, cur, 1]
+      if (resp == 1) {
+        min = cur+1
+        R = R + 1
+      }
+      else {
+        max = cur-1
+        W = W + 1
+      }
+      cur = floor((max+min) / 2)
+      it = it + 1
+    }
+    
+    #Calculate ability from items: https://www.rasch.org/rmt/rmt102t.htm
+    if (R == 0) {
+      R = 0.5
+      W = W - 0.5
+    }
+    if (W == 0) {
+      W = 0.5
+      R = R - 0.5
+    }
+    D_mean = sum(ib$b[items]) / (R+W)
+    V = sum((ib$b[items] - D_mean)^2) / (R+W-1)
+    M = D_mean + sqrt(1 + V/2.9)*log(R/W)
+    
+    if (is.nan(M)) {
+      print(R)
+      print(W)
+      print(items)
+    }
+    
+    #P_i = 1 / (1 + exp(ib$b[items] - M))
+    #Score = sum(P_i)
+    #Variance = sum(P_i *(1-P_i))
+    #M_d = M + (R - Score)/Variance
+    #M_d = max(min(M+1, M_d), M-1)
+    
+    est = c(est, M)
+    n = c(n, it)
+  }
+  
+  results = cbind(results, c(cor(est, pb), mean(n), sum(est-pb)/1000))
+  raw_est = c(raw_est, list(est))
+  #plot(pb, est)
+}
+
+results
+mean(unlist(results[1,]))
+mean(unlist(results[2,]))
+
+jpeg("plot2.jpg", width=850, height=350)
+plot(PPgenSEN$ST1, raw_est[[1]], main="Accuracy", xlab = "Assigned Theta", ylab="CAT estimated Theta")
+abline(lsfit(PPgen$ST1, raw_est[[2]]), col="red")
+dev.off()
