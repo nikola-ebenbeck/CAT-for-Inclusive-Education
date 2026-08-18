@@ -1,0 +1,326 @@
+
+1. Data, Function & Package Preparation
+
+```{r Load Packages}
+library(tidyverse) # data wrangling
+library(pairwise) # rasch modeling
+library(apaTables) # correlation tables
+```
+
+```{r Read Data}
+data <- read.csv2("C:/Users/Nikola/OneDrive - Microsoft Cloud - Bereich Universität Regensburg/Daten/DaF-L Lesescreening/Studie Überprüfung Lesescreening/data_wide_bearbeitet.csv")
+```
+
+```{r Define Functions}
+sum_sd <- function(x) {   # Function: printing summary and sd of a vector
+  print(summary(x)) 
+  print(sd(x, na.rm=T)) }
+
+rasch_lr <- function(x) { # Function: Calculate Rasch model and LR Tests
+  a <- pers(pair(x))
+  print(andersentest.pers(a, split="random"))
+  print(andersentest.pers(a, split="median"))
+  print(andersentest.pers(a, split=rasch$SEN))
+  return(a) }
+```
+
+________________________________________________________________________________
+2. Psychometric Analysis
+
+```{r Prepare Data}
+rasch <- data %>% 
+  select(-c(X, Kind_ID, Schulbesuchsjahr, Klassenstufe, Alter, Geschlecht,      # Remove student data from df for rasch modeling 
+            starts_with(c("Sum", "Err", "All")))) %>%
+  mutate(SEN = case_when(SPF=="1"|SPF=="2"|SPF=="3"|LRS=="1"~1, TRUE~0)) %>%    # Recode SEN status for DIF analysis
+  select(-c(GB, SPF, LRS))                                                      # Remove unneeded SEN status columns
+
+items <- rasch %>%                                                              # Select Items
+  select(c(starts_with("P_"), starts_with("W_"),
+           starts_with("B_"), starts_with("S_")))
+```
+
+```{r Model Fit and Measurement Invariance}
+Rasch1 <- rasch_lr(select(items,starts_with("P_"))) # Unidimensional Rasch model and LR test with three Splits
+Rasch2 <- rasch_lr(select(items,starts_with("W_")))
+Rasch3 <- rasch_lr(select(items,starts_with("B_")))
+Rasch4 <- rasch_lr(select(items,starts_with("S_")))
+```
+Subtest 1:
+- Random Split:  Chi2 = 25.28, df = 69, p = 1
+- Median Split:  Chi2 = 58.86, df = 69, p = 0.8
+- SEN Split:  Chi2 = 115.87, df = 69, p = 0.0004 <-- ***
+
+Subtest 2:
+- Random Split:  Chi2 = 50.68, df = 103, p = 1
+- Median Split:  Chi2 = 0, df = 103, p = 1
+- SEN Split:  Chi2 = 85.96, df = 103, p = 0.89
+
+Subtest 3:
+- Random Split:  Chi2 = 36.529, df = 59, p = 1
+- Median Split:  Chi2 = 0, df = 59, p = 1
+- SEN Split:  Chi2 = 24.62, df = 69, p = 1
+
+Subtest 4:
+- Random Split:  Chi2 = 29.18, df = 69, p = 1
+- Median Split:  Chi2 = 215.12, df = 69, p = 0 <-- ***
+- SEN Split:  Chi2 = 76.41, df = 69, p = 0.25
+
+```{r DIF Analysis for Subtest 1}
+dif_PB <- select(items,starts_with("P_")) %>% pairwise.S(., split=rasch$SEN) # DIF Analysis for Identification of unfitting items
+dif_PB_new <- select(items,starts_with("P_")) %>% select(-c("P_6G", "P_4A", "P_2J")) %>% #  Remove unfitted item (p<.01)
+  pairwise.S(., split=rasch$SEN)
+Rasch1_new <- select(items,starts_with("P_")) %>% select(-c("P_6G", "P_4A", "P_2J")) %>% rasch_lr() # Calculate LR Tests again
+```
+
+Subtest 1:
+- Random Split:  Chi2 = 37.31, df = 63, p = 1
+- Median Split:  Chi2 = 53.41, df = 63, p = 0.8
+- SEN Split:  Chi2 = 68.58, df = 63, p = 0.29
+
+```{r Fit Analysis for Subtest 4}
+x <- items %>% select(starts_with("S_"))
+plot(grm(daten=x,m=2,split="median"), itemNames=T)
+x <- select(x, -c("S_1D"))
+Rasch4_new <- rasch_lr(x)
+```
+
+Subtest 4:
+- Random Split:  Chi2 = 26.53, df = 67, p = 1
+- Median Split:  Chi2 = 199.53, df = 67, p = 0
+- SEN Split:  Chi2 = 77.19, df = 67, p = 0.19
+
+```{r Rasch model, item difficulties & infit outfit statistics}
+lapply(list(
+  Rasch1_new$pair$sigma, Rasch2$pair$sigma, 
+  Rasch3$pair$sigma, Rasch4_new$pair$sigma,
+  pairwise.item.fit(Rasch1_new)$OUTFIT.MSQ, 
+  pairwise.item.fit(Rasch1_new)$INFIT.MSQ,
+  pairwise.item.fit(Rasch2)$OUTFIT.MSQ, 
+  pairwise.item.fit(Rasch2)$INFIT.MSQ,
+  pairwise.item.fit(Rasch3)$OUTFIT.MSQ, 
+  pairwise.item.fit(Rasch3)$INFIT.MSQ,
+  pairwise.item.fit(Rasch4_new)$OUTFIT.MSQ, 
+  pairwise.item.fit(Rasch4_new)$INFIT.MSQ), 
+  sum_sd)
+
+plot(Rasch4_new)
+```
+
+Item Difficulties Subtest 1:
+Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+-1.52685 -1.01366  0.09492  0.00000  0.81111  1.90812 
+[1] 1.036665
+
+Item Difficulties Subtest 2:
+Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+-1.66067 -0.70588  0.08828  0.00000  0.58860  2.66954 
+[1] 0.8612886
+
+Item Difficulties Subtest 3:
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+-0.9360 -0.5684 -0.2850  0.0000  0.4262  2.1686 
+[1] 0.7481101
+
+Item Difficulties Subtest 4:
+    Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+-1.35673 -0.44003 -0.05668  0.00000  0.51359  1.47008 
+[1] 0.6942871
+
+Outfit Subtest 1:
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.2991  0.5946  0.8111  0.7814  0.9442  1.5343 
+[1] 0.2743384
+
+Infit Subtest 1:
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.6513  0.7787  0.8757  0.8968  0.9990  1.2457 
+[1] 0.1535149
+
+Outfit Subtest 2:
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.3433  0.5713  0.6721  0.7193  0.8109  1.3406 
+[1] 0.2232832
+
+Infit Subtest 2:
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.7304  0.8448  0.8722  0.9072  0.9383  1.2793 
+[1] 0.1133179
+
+Outfit Subtest 3:
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.3496  0.4915  0.6156  0.6338  0.6957  1.4171 
+[1] 0.2107952
+
+Infit Subtest 3:
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.6766  0.7979  0.8388  0.8644  0.8762  1.3084 
+[1] 0.1201257
+
+Outfit Subtest 4:
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.4717  0.6448  0.7875  0.8538  0.9299  1.8516 
+[1] 0.3495185
+
+Infit Subtest 4:
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.6933  0.8028  0.8924  0.9431  1.0143  1.7157 
+[1] 0.2280437
+
+________________________________________________________________________________
+3. SEN Performance Analysis
+
+```{r Calculate Sum Scores per Subtest}
+data_new <- data %>% 
+  select(-c("P_6G", "P_4A", "P_2J", "S_1D")) %>%
+  mutate(Sum_1=rowSums(select(., starts_with("P_")), na.rm=T), 
+         Sum_2=rowSums(select(., starts_with("W_")), na.rm=T), 
+         Sum_3=rowSums(select(., starts_with("B_")), na.rm=T), 
+         Sum_4=rowSums(select(., starts_with("S_")), na.rm=T)) %>%
+  mutate(SPF = replace(SPF, SPF=="3", 1)) %>%
+  mutate(SPF = replace(SPF, LRS=="1", 1))
+```
+
+```{r Correlations per Group}
+data_new %>% filter(SPF==0) %>% select(Sum_1:Sum_4) %>% apa.cor.table(table.number = 2)
+data_new %>% filter(SPF==1) %>% select(Sum_1:Sum_4) %>% apa.cor.table(table.number = 3)
+data_new %>% filter(SPF==2) %>% select(Sum_1:Sum_4) %>% apa.cor.table(table.number = 4)
+data_new %>% select(Sum_1:Sum_4) %>% apa.cor.table(table.number = 5)
+```
+
+```{r Prepare ANOVA and Plot Data}
+plot <- select(data_new, GB, SPF, LRS, Klassenstufe, Sum_1:Sum_4) %>%
+  mutate(SPF = replace(SPF, SPF=="3", 1)) %>%
+  mutate(SPF = replace(SPF, LRS=="1", 1)) %>%
+  mutate(GB = replace(GB, SPF=="1", 4)) %>%
+  pivot_longer(Sum_1:Sum_4, names_to="Score", values_to="n") %>%
+  separate(Score, into=c("Score", "Task"), sep="_")
+  
+ST1 <- filter(plot, Task==1)
+ST2 <- filter(plot, Task==2)
+ST3 <- filter(plot, Task==3)
+ST4 <- filter(plot, Task==4)
+```
+
+```{r ANOVA of perfomance x SEN status}
+summary(aov(ST1$n ~ ST1$SPF)) # subtest 1
+summary(aov(ST2$n ~ ST2$SPF)) # subtest 2
+summary(aov(ST3$n ~ ST3$SPF)) # subtest 3
+summary(aov(ST4$n ~ ST4$SPF)) # subtest 4
+```
+
+```{r Posthoc of perfomance x SEN status}
+pairwise.t.test(ST1$n, ST1$SPF) # subtest 1
+pairwise.t.test(ST2$n, ST2$SPF) # subtest 2
+pairwise.t.test(ST3$n, ST3$SPF) # subtest 3
+pairwise.t.test(ST4$n, ST4$SPF) # subtest 4
+```
+
+```{r fig.height=3, fig.width=7}
+ggplot(plot, aes(x=Task, y=n, fill=as.factor(SPF))) + geom_boxplot() + theme_bw() +
+  scale_y_continuous(name="number of correct answers", limits = c(0, 60)) +
+  scale_x_discrete(labels=c("subtest 1", "subtest 2","subtest 3","subtest 4")) +
+  scale_fill_grey(name="SEN status", labels=c("No SEN", "LRSC", "ID"), 
+                  start=0.4, end=1) +
+  theme(legend.position = "bottom", axis.title.x = element_blank())
+```
+```{r ANOVA of perfomance x severity}
+summary(aov(ST1$n ~ ST1$GB)) # subtest 1
+summary(aov(ST2$n ~ ST2$GB)) # subtest 2
+summary(aov(ST3$n ~ ST3$GB)) # subtest 3
+summary(aov(ST4$n ~ ST4$GB)) # subtest 4
+```
+
+```{r Posthoc of perfomance x severity}
+pairwise.t.test(ST1$n, ST1$GB) # subtest 1
+pairwise.t.test(ST2$n, ST2$GB) # subtest 2
+pairwise.t.test(ST3$n, ST3$GB) # subtest 3
+pairwise.t.test(ST4$n, ST4$GB) # subtest 4
+```
+
+```{r fig.height=3, fig.width=7}
+y <- plot %>% 
+  filter(!is.na(GB)) %>%
+  mutate(GB = factor(GB, levels=c("4", "0", "1", "2")))
+ggplot(y, aes(x=Task, y=n, fill=GB)) + geom_boxplot() + theme_bw() +
+  scale_y_continuous(name="number of correct answers", limits = c(0, 60)) +
+  scale_x_discrete(labels=c("subtest 1", "subtest 2","subtest 3","subtest 4")) +
+  scale_fill_grey(name="ID Severity", labels=c("LRSC", "No ID", "Mild", "Medium"), 
+                  start=0.4, end=1) +
+  theme(legend.position = "bottom", axis.title.x = element_blank())
+```
+
+```{r fig.height=3, fig.width=7}
+plot_grade <- plot %>% filter(SPF==2) %>% 
+  mutate(Klassenstufe = ifelse(substr(Klassenstufe, 1, 2) == "MS", "sec", Klassenstufe))
+ggplot(plot_grade, aes(x=Task, y=n, fill=as.factor(Klassenstufe))) + geom_boxplot() + theme_bw() +
+  scale_y_continuous(name="number of correct answers", limits = c(0, 60)) +
+  scale_x_discrete(labels=c("subtest 1", "subtest 2","subtest 3","subtest 4")) +
+  scale_fill_grey(name="Grade level", labels=c("Third", "Forth", "Secondary"), 
+                  start=0.4, end=1) +
+  theme(legend.position = "bottom", axis.title.x = element_blank())
+```
+
+```{r ANOVA of perfomance x grade level}
+summary(aov(filter(plot_grade, Task==1)$n ~ filter(plot_grade, Task==1)$Klassenstufe)) # subtest 1
+summary(aov(filter(plot_grade, Task==2)$n ~ filter(plot_grade, Task==2)$Klassenstufe)) # subtest 2
+summary(aov(filter(plot_grade, Task==3)$n ~ filter(plot_grade, Task==3)$Klassenstufe)) # subtest 3
+summary(aov(filter(plot_grade, Task==4)$n ~ filter(plot_grade, Task==4)$Klassenstufe)) # subtest 4
+```
+
+```{r Posthoc of perfomance x grade level}
+pairwise.t.test(filter(plot_grade, Task==1)$n, filter(plot_grade, Task==1)$Klassenstufe) # subtest 1
+pairwise.t.test(filter(plot_grade, Task==2)$n, filter(plot_grade, Task==2)$Klassenstufe) # subtest 2
+pairwise.t.test(filter(plot_grade, Task==3)$n, filter(plot_grade, Task==3)$Klassenstufe) # subtest 3
+pairwise.t.test(filter(plot_grade, Task==4)$n, filter(plot_grade, Task==4)$Klassenstufe) # subtest 4
+```
+
+________________________________________________________________________________
+4. Flash Reading Analysis
+
+```{r fig.height=3, fig.width=7}
+BL <- select(data, 2:39)
+BL_sec <- read.csv2("C:/Users/Nikola/OneDrive - Microsoft Cloud - Bereich Universität Regensburg/Daten/DaF-L Lesescreening/Studie Überprüfung Lesescreening/GB Studie/Itempool_3.csv")
+
+sec_1 <- BL_sec %>% filter(ms=="500" | ms=="1000")
+sec_1 <- as.vector(sec_1$item)
+sec_1 <- sec_1[-c(15, 16)]
+
+sec_2 <- BL_sec %>% filter(ms=="1500" | ms=="2000")
+sec_2 <- as.vector(sec_2$item)
+
+BL_new <- BL %>% filter(SPF!=0) %>%
+  mutate(Sum_1 = rowSums(select(., all_of(sec_1))),
+         Sum_2 = rowSums(select(., all_of(sec_2))))
+
+summary(BL_new$Sum_1)
+summary(BL_new$Sum_2)
+
+plot_BL <- BL_new %>% pivot_longer(Sum_1:Sum_2, names_to="Time", values_to="n")
+
+plot_BL <- select(BL_new, GB, SPF, LRS, Klassenstufe, Sum_1:Sum_2) %>%
+  mutate(SPF = replace(SPF, SPF=="3", 1)) %>%
+  mutate(SPF = replace(SPF, LRS=="1", 1)) %>%
+  mutate(GB = replace(GB, SPF=="1", 4)) %>%
+  pivot_longer(Sum_1:Sum_2, names_to="Time", values_to="n")
+
+y <- plot_BL %>% 
+  filter(!is.na(GB)) %>%
+  mutate(GB = factor(GB, levels=c("4", "0", "1", "2")))
+ggplot(y, aes(x=Time, y=n, fill=GB)) + geom_boxplot() + theme_bw() +
+  scale_y_continuous(name="number of correct answers") +
+  scale_x_discrete(labels=c("1 second or less", "more than 1 second")) +
+  scale_fill_grey(name="ID Severity", labels=c("LRSC", "No ID", "Mild", "Medium"), 
+                  start=0.4, end=1) +
+  theme(legend.position = "bottom", axis.title.x = element_blank())
+
+
+```
+
+```{r fig.height=3, fig.width=7}
+ggplot(plot_BL, aes(x=Task, y=n, fill=as.factor(SPF))) + geom_boxplot() + theme_bw() +
+  scale_y_continuous(name="number of correct answers", limits = c(0, 60)) +
+  scale_x_discrete(labels=c("subtest 1", "subtest 2","subtest 3","subtest 4")) +
+  scale_fill_grey(name="SEN status", labels=c("No SEN", "LRSC", "ID"), 
+                  start=0.4, end=1) +
+  theme(legend.position = "bottom", axis.title.x = element_blank())
+```
