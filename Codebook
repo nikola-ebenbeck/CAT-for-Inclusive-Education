@@ -1,0 +1,23 @@
+- Kind_ID: ID of student
+- Schulbesuchsjahr: Number of student's year at school
+- GB: Has the student an intellectual disability? (y/n)
+- Alter: Age of student
+- Geschlecht: Gender of student (0 = female, 1 = male, 2 = nonbinary)
+- SPF: Has the student special educational needs? (y/n)
+- LRS: Has the student a reading disorder? (y/n)
+- Items starting with "B": Items of the flash reading subscale
+- Items starting with "P": Items of the phonological awareness subscale
+- Items starting with "S": Items of the sentence comprehension subscle
+- Items starting with "W": Items of the vocabulaty comprehension subscale
+- Sum_1: Sum of Phonological Awareness
+- Sum_2: Sum of Vocabulary
+- Sum_3: Sum of Flash Reading
+- Sum_4: Sum of Sentence Comprehension
+- Err_1: Number of wrong answers of Phonological Awareness
+- Err_2: Number of wrong answers of Vocabulary
+- Err_3: Number of wrong answers of Flash Reading
+- Err_4: Number of wrong answers of Sentence Comprehension
+- All_1: Number of answered items of Phonological Awareness
+- All_2: Number of answered items of Vocabulary
+- All_3: Number of answered items of Flash Reading
+- All_4: Number of answered items of Sentence Comprehension
