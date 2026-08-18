@@ -1,5 +1,5 @@
 # Computerized Adaptive Testing in Inclusive Education
-Repositorium of my dissertation thesis on computerized adaptive testing in inclusive education.
+Repositorium of my dissertation thesis on computerized adaptive testing in inclusive education. In this repo you can find the respective R codes and data used. Feel free to contact me!
 
 This repo combines several of my works on CAT in inclusive education:
 
@@ -17,5 +17,10 @@ This repo combines several of my works on CAT in inclusive education:
 
 - **Study 6**: Ebenbeck, N., Anderson, S., Jungjohann, J., & Gebhardt, M. (2024). Mehr Zeit für pädagogische Handlungen durch adaptives Testen. Zeitschrift für Heilpädagogik, (2), 52-61. https://epub.ub.uni-muenchen.de/109116/
 
-In this repo you can find the respective R codes and data used.
-Feel free to contact me!
+-------------------------------------------------------------
+
+**Slides to my talks on this topic:**
+- Computerbasiertes Adaptives Testen in der Inklusiven Pädagogik (Disputation, University of Regensburg). https://doi.org/10.13140/RG.2.2.14259.20003 
+- Disability labels do not define reading ability - Evaluating a tabled-based reading screening for students with intellectual disabilities (IASSIDD Conference July 2026, Munich). https://doi.org/10.13140/RG.2.2.12749.60647
+- Developing a Digital, Adaptive, Inclusive Reading Screening: Evaluating Test Modification's Impact on Students With and Without Learning Disabilities' Performance (ECER, August 2023, Glasgow). https://doi.org/10.13140/RG.2.2.23786.08642
+- Adaptives Testen in der Sonderpädagogik - Simulation computerbasierter adaptiver Tests basierend auf Speed-Test-Daten (AESF May 2022, Hannover). https://doi.org/10.13140/RG.2.2.23984.64000
