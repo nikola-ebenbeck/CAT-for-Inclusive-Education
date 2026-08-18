@@ -13,7 +13,7 @@ This repo combines several of my works on CAT in inclusive education:
 
 - **Study 4**: Zellner, J., Ebenbeck, N., & Gebhardt, M. (2024). Designing a digital flash reading test for data-based decisions in inclusive classrooms: duration and word length as difficulty-generating-item characteristics. Education Sciences, 15(1), 5. https://doi.org/10.3390/educsci15010005
   
-- **Study 5**: Ebenbeck, N., Zentel, P., & Gebhardt, M. (2025). How differentiated can a new tablet-based reading screening measure the reading proficiency of students with intellectual disabilities? Comparing the impact of disability, disability type and grade level on reading skills. Journal of Intellectual Disabilities, 29(4), 996-1010.
+- **Study 5**: Ebenbeck, N., Zentel, P., & Gebhardt, M. (2025). How differentiated can a new tablet-based reading screening measure the reading proficiency of students with intellectual disabilities? Comparing the impact of disability, disability type and grade level on reading skills. Journal of Intellectual Disabilities, 29(4), 996-1010. https://doi.org/10.1177/17446295241282750
 
 - **Study 5**: Ebenbeck, N., Anderson, S., Jungjohann, J., & Gebhardt, M. (2024). Mehr Zeit für pädagogische Handlungen durch adaptives Testen. Zeitschrift für Heilpädagogik, (2), 52-61. https://epub.ub.uni-muenchen.de/109116/
 
